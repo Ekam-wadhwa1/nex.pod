@@ -111,6 +111,11 @@ This project demonstrates:
 * Bluetooth/WiFi connectivity
 
 ---
+![Platform](https://img.shields.io/badge/Platform-ESP32-blue)
+![Status](https://img.shields.io/badge/Status-Development-orange)
+![UI](https://img.shields.io/badge/UI-OLED-lightgrey)
+
+---
 
 ## 📌 Author
 
