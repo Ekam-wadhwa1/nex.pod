@@ -9,7 +9,6 @@ you can write your own code and make it do whatever you want
 ![Platform](https://img.shields.io/badge/Platform-ESP32-blue)
 ![Status](https://img.shields.io/badge/Status-Development-orange)
 ![UI](https://img.shields.io/badge/UI-OLED-lightgrey)
-![KICAD](https://img.shields.io/badge/Design-KICAD-blue?style=for-the-badge&logo=kicad&logoColor=white) 
 
 # author
 made by ekam wadhwa
