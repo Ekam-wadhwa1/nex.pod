@@ -1,129 +1,21 @@
 # nex.pod
-A compact, interactive multi-mode smart device built using the XIAO ESP32-S3. This project combines a digital clock, virtual desk pet, mini games, and productivity tools into a single OLED-based system controlled with just two buttons.
+nexpod is a compact device that can be added in any case or retrofitted in old cases  of devices like charger cases old plastic boxes or even make a pcb, and more to have a companion and be coded to display whatever you want and be used in any way possible,it all depends on your creativity.
 
-## ✨ Features
+## note
+the code given is just a demo what you can do and how you can use it
+you can write your own code and make it do whatever you want
 
-### 🐾 Desk Pet Mode
-
-* Animated virtual pet displayed on OLED
-* Time-based behavior (morning, afternoon, evening, night)
-* Mood system that changes based on interaction
-* Idle detection (pet reacts if ignored)
-* Random animations and sound feedback
-
----
-
-### ⏰ Clock Mode
-
-* Real-time clock using RTC module
-* Displays time and date
-* Clean and minimal interface
-
----
-
-### 🎮 Game Mode
-
-* Lightweight 2-button mini games
-* Fast and responsive gameplay
-* Designed for low-resource OLED systems
-
----
-
-### ⏱ Stopwatch
-
-* Start/Stop and Reset functionality
-* Simple and accurate time tracking
-
----
-
-### 📚 Study Timer (Pomodoro)
-
-* 25-minute focus sessions
-* 5-minute break cycles
-* Buzzer alerts for session completion
-
----
-
-### ⚙️ Settings
-
-* Toggle sound (buzzer)
-* Reset pet mood
-* Basic time configuration
-
----
-
-## 🎮 Controls
-
-* **Button 1 (D6):** Scroll / Next
-* **Button 2 (D7):** Select / Back
-* **Long Press:** Open main menu
-
----
-
-## 🛠 Hardware Used
-
-* XIAO ESP32-S3
-* SSD1306 OLED Display (128x64, I2C)
-* DS1307 RTC Module
-* 2 Push Buttons
-* Buzzer
-
----
-
-## 🔌 Pin Configuration
-
-| Component | Pin |
-| --------- | --- |
-| SDA       | D4  |
-| SCL       | D5  |
-| Button 1  | D6  |
-| Button 2  | D7  |
-| Buzzer    | D2  |
-
----
-
-## 🧠 How It Works
-
-The system runs on a **mode-based architecture**, where each feature (Pet, Clock, Game, etc.) operates as a separate module.
-A simple UI system allows navigation using only two buttons.
-
-The desk pet uses **time-based logic and randomness** to simulate behavior, creating the illusion of intelligence without requiring additional sensors.
-
----
-
-## 🚀 Why This Project?
-
-This project demonstrates:
-
-* Embedded UI design with minimal input
-* Multi-functional system architecture
-* Real-time processing using RTC
-* Interactive behavior simulation
-* Efficient use of limited hardware
-
----
-
-## 📸 Future Improvements
-
-* Add sensors (LDR, MPU6050) for real-world interaction
-* More games and animations
-* Battery-powered portable version
-* Bluetooth/WiFi connectivity
-
----
+### tags
 ![Platform](https://img.shields.io/badge/Platform-ESP32-blue)
 ![Status](https://img.shields.io/badge/Status-Development-orange)
 ![UI](https://img.shields.io/badge/UI-OLED-lightgrey)
+![KICAD](https://img.shields.io/badge/Design-KICAD-blue?style=for-the-badge&logo=kicad&logoColor=white) 
 
----
+# author
+made by ekam wadhwa
+founder, 
+nexus 
 
-## 📌 Author
+[![Instagram](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/ekam.wadhwa1/)
 
-Built by **Ekam Wadhwa**
-A student exploring embedded systems, UI design, and interactive hardware projects.
-
----
-
-## ⭐ If you like this project
-
-Give it a star and feel free to fork or contribute!
+### star the project if you wanna support me
