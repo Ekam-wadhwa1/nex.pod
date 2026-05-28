@@ -5,6 +5,9 @@ nexpod is a compact device that can be added in any case or retrofitted in old c
 the code given is just a demo what you can do and how you can use it
 you can write your own code and make it do whatever you want
 
+## demo
+https://wokwi.com/projects/462925725106226177
+
 ### tags
 ![Platform](https://img.shields.io/badge/Platform-ESP32-blue)
 ![Status](https://img.shields.io/badge/Status-Development-orange)
