@@ -1,294 +1,269 @@
+
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <U8g2lib.h>
 #include <RTClib.h>
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
 RTC_DS1307 rtc;
 
 // Pins
-#define BTN1 1
-#define BTN2 2
-#define BUZZER D2
-#define SDA_PIN D4
-#define SCL_PIN D5
+#define BTN1 2
+#define BTN2 3
+#define BUZZER 4
 
-// Modes
-int mode = 0;
+enum Mode {MENU, PET, CLOCKMODE, STOPWATCHMODE, GAMEMODE};
+Mode mode = MENU;
+
+const char* menuItems[] = {"Pet","Clock","Stopwatch","Game"};
 int menuIndex = 0;
-const char* menuItems[] = {"Pet", "Clock", "Stopwatch", "Game"};
 
 // Buttons
-bool lastBtn1 = HIGH;
-bool lastBtn2 = HIGH;
+bool lastB1 = HIGH;
+bool lastB2 = HIGH;
 
 // Pet
 int mood = 80;
-bool eyesClosed = false;
-int eyeOffset = 0;
-unsigned long lastBlink = 0;
-unsigned long lastEyeMove = 0;
 unsigned long lastMoodDrop = 0;
+unsigned long lastAnim = 0;
 unsigned long lastInteract = 0;
-
-// Game
-bool gameActive = false;
-unsigned long gameStart = 0;
-int targetTime = 0;
+int eyeX = 0;
+int eyeY = 0;
+bool blinkState = false;
 
 // Stopwatch
+bool swRunning = false;
 unsigned long swStart = 0;
 unsigned long swElapsed = 0;
-bool swRunning = false;
 
-//setup
+// Game
+bool gameWaiting = false;
+bool gameReady = false;
+unsigned long gameStart = 0;
+unsigned long waitStart = 0;
+unsigned long waitTime = 0;
+
+bool pressed(int pin, bool &lastState){
+  bool cur = digitalRead(pin);
+  bool p = (lastState == HIGH && cur == LOW);
+  lastState = cur;
+  return p;
+}
+
+void beep(int f, int d=40){
+  tone(BUZZER,f,d);
+}
+
+void drawEyes(int xOff,int yOff,bool blinked){
+  if(blinked){
+    u8g2.drawRBox(8,26,50,8,4);
+    u8g2.drawRBox(70,26,50,8,4);
+    return;
+  }
+
+  u8g2.drawRBox(8+xOff,12+yOff,50,35,9);
+  u8g2.drawRBox(70+xOff,12+yOff,50,35,9);
+}
+
+void drawHappy(){
+  u8g2.drawRBox(8,12,50,35,11);
+  u8g2.drawRBox(70,12,50,35,11);
+  u8g2.setDrawColor(0);
+  u8g2.drawDisc(33,62,38,U8G2_DRAW_ALL);
+  u8g2.drawDisc(95,62,38,U8G2_DRAW_ALL);
+  u8g2.setDrawColor(1);
+}
+
+void drawSad(){
+  u8g2.drawRBox(8,18,50,29,9);
+  u8g2.drawRBox(70,18,50,29,9);
+  u8g2.setDrawColor(0);
+  u8g2.drawTriangle(3,14,64,14,3,36);
+  u8g2.drawTriangle(68,14,124,36,124,14);
+  u8g2.setDrawColor(1);
+}
+
 void setup() {
   pinMode(BTN1, INPUT_PULLUP);
   pinMode(BTN2, INPUT_PULLUP);
   pinMode(BUZZER, OUTPUT);
 
-  Wire.begin(SDA_PIN, SCL_PIN);
+  randomSeed(analogRead(A0));
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
-
+  u8g2.begin();
   rtc.begin();
 }
 
-//buttob
-bool btnPressed(int pin, bool &lastState) {
-  bool current = digitalRead(pin);
-  if (lastState == HIGH && current == LOW) {
-    lastState = current;
-    delay(5);
-    return true;
-  }
-  lastState = current;
-  return false;
-}
-
-//looop
 void loop() {
-  switch (mode) {
-    case 0: menu(); break;
-    case 1: petMode(); break;
-    case 2: clockMode(); break;
-    case 3: stopwatchMode(); break;
-    case 4: gameMode(); break;
+  switch(mode){
+    case MENU: menuScreen(); break;
+    case PET: petScreen(); break;
+    case CLOCKMODE: clockScreen(); break;
+    case STOPWATCHMODE: stopwatchScreen(); break;
+    case GAMEMODE: gameScreen(); break;
   }
 }
 
-//menu
-void menu() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-
-  for (int i = 0; i < 4; i++) {
-    if (i == menuIndex) display.print("> ");
-    else display.print("  ");
-    display.println(menuItems[i]);
+void menuScreen(){
+  u8g2.clearBuffer();
+  for(int i=0;i<4;i++){
+    u8g2.setCursor(5,15+i*12);
+    if(i==menuIndex) u8g2.print(">");
+    else u8g2.print(" ");
+    u8g2.print(menuItems[i]);
   }
 
-  if (btnPressed(BTN1, lastBtn1)) {
-    menuIndex = (menuIndex + 1) % 4;
-    beep(1200);
+  if(pressed(BTN1,lastB1)){
+    menuIndex=(menuIndex+1)%4;
+    beep(1400);
   }
 
-  if (btnPressed(BTN2, lastBtn2)) {
-    mode = menuIndex + 1;
-    beep(800);
+  if(pressed(BTN2,lastB2)){
+    mode=(Mode)(menuIndex+1);
+    beep(1800);
   }
 
-  display.display();
+  u8g2.sendBuffer();
 }
 
-// pet mode
-void petMode() {
-  display.clearDisplay();
-
-  // mood
-  if (millis() - lastMoodDrop > 5000) {
-    mood--;
-    lastMoodDrop = millis();
+void petScreen(){
+  if(millis()-lastMoodDrop>10000){
+    mood=max(0,mood-1);
+    lastMoodDrop=millis();
   }
 
-  if (millis() - lastInteract > 15000) {
-    mood -= 2;
+  if(pressed(BTN1,lastB1)){
+    mood=min(100,mood+5);
+    lastInteract=millis();
+    beep(2000);
   }
 
-  if (btnPressed(BTN1, lastBtn1)) {
-    mood += 5;
-    lastInteract = millis();
-    beep(1500);
-  }
-
-  if (btnPressed(BTN2, lastBtn2)) {
-    mode = 0;
+  if(pressed(BTN2,lastB2)){
+    mode=MENU;
     return;
   }
 
-  mood = constrain(mood, 0, 100);
-
-  // Blink
-  if (millis() - lastBlink > random(2000, 5000)) {
-    eyesClosed = true;
-    lastBlink = millis();
-  }
-  if (eyesClosed && millis() - lastBlink > 120) {
-    eyesClosed = false;
+  if(millis()-lastAnim>2000){
+    eyeX=random(-6,7);
+    eyeY=random(-2,3);
+    blinkState=random(0,5)==0;
+    lastAnim=millis();
   }
 
-  // Eyes
-  if (millis() - lastEyeMove > 1000) {
-    eyeOffset = random(-2, 3);
-    lastEyeMove = millis();
-  }
+  u8g2.clearBuffer();
 
-  drawFace();
+  if(mood>70) drawHappy();
+  else if(mood<25) drawSad();
+  else drawEyes(eyeX,eyeY,blinkState);
 
-  display.setCursor(35, 54);
-  display.print("Mood:");
-  display.print(mood);
+  u8g2.setCursor(0,62);
+  u8g2.print("Mood:");
+  u8g2.print(mood);
 
-  display.display();
+  u8g2.sendBuffer();
 }
 
-//faces
-void drawFace() {
-  int y = 20;
-  int lx = 35 + eyeOffset;
-  int rx = 75 + eyeOffset;
-
-  if (eyesClosed) {
-    display.drawLine(lx, y, lx + 10, y, WHITE);
-    display.drawLine(rx, y, rx + 10, y, WHITE);
-  } else {
-    if (mood > 70) {
-      display.fillCircle(lx, y, 4, WHITE);
-      display.fillCircle(rx, y, 4, WHITE);
-    } else if (mood > 30) {
-      display.drawCircle(lx, y, 4, WHITE);
-      display.drawCircle(rx, y, 4, WHITE);
-    } else {
-      display.drawLine(lx, y + 2, lx + 8, y - 2, WHITE);
-      display.drawLine(rx, y + 2, rx + 8, y - 2, WHITE);
-    }
+void clockScreen(){
+  if(pressed(BTN2,lastB2)){
+    mode=MENU;
+    return;
   }
-
-  // Mouth
-  int bounce = sin(millis() / 200.0) * 2;
-
-  if (mood > 70)
-    display.drawLine(50, 40 + bounce, 78, 40 + bounce, WHITE);
-  else if (mood > 30)
-    display.drawPixel(64, 40, WHITE);
-  else
-    display.drawLine(50, 42, 78, 42, WHITE);
-}
-
-//clock
-void clockMode() {
-  display.clearDisplay();
 
   DateTime now = rtc.now();
 
-  display.setTextSize(2);
-  display.setCursor(10, 10);
-  display.print(now.hour());
-  display.print(":");
-  if (now.minute() < 10) display.print("0");
-  display.print(now.minute());
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso20_tf);
 
-  if (btnPressed(BTN2, lastBtn2)) mode = 0;
+  char buf[12];
+  sprintf(buf,"%02d:%02d",now.hour(),now.minute());
+  u8g2.drawStr(5,30,buf);
 
-  display.display();
+  u8g2.setFont(u8g2_font_6x10_tf);
+  sprintf(buf,"%02d/%02d/%04d",now.day(),now.month(),now.year());
+  u8g2.drawStr(20,55,buf);
+
+  u8g2.sendBuffer();
 }
 
-// stopwatch
-void stopwatchMode() {
-  display.clearDisplay();
+void stopwatchScreen(){
+  if(pressed(BTN1,lastB1)){
+    swRunning=!swRunning;
 
-  if (btnPressed(BTN1, lastBtn1)) {
-    swRunning = !swRunning;
-    if (swRunning) swStart = millis() - swElapsed;
-    else swElapsed = millis() - swStart;
-    beep(1000);
+    if(swRunning)
+      swStart=millis()-swElapsed;
+    else
+      swElapsed=millis()-swStart;
   }
 
-  if (btnPressed(BTN2, lastBtn2)) {
-    swRunning = false;
-    swElapsed = 0;
-    mode = 0;
-    beep(600);
+  if(pressed(BTN2,lastB2)){
+    swRunning=false;
+    swElapsed=0;
+    mode=MENU;
+    return;
   }
 
-  unsigned long t = swRunning ? millis() - swStart : swElapsed;
+  unsigned long t=swRunning?(millis()-swStart):swElapsed;
 
-  int sec = t / 1000;
-  int min = sec / 60;
-  sec %= 60;
+  unsigned long sec=t/1000;
+  unsigned long min=sec/60;
+  sec%=60;
 
-  display.setTextSize(2);
-  display.setCursor(20, 20);
-  display.print(min);
-  display.print(":");
-  if (sec < 10) display.print("0");
-  display.print(sec);
+  char buf[20];
+  sprintf(buf,"%02lu:%02lu",min,sec);
 
-  display.display();
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_logisoso20_tf);
+  u8g2.drawStr(5,35,buf);
+  u8g2.sendBuffer();
 }
 
-//<3
-// games
-void gameMode() {
-  display.clearDisplay();
+void gameScreen(){
 
-  if (!gameActive) {
-    display.setCursor(10, 20);
-    display.print("Wait...");
-
-    targetTime = random(2000, 5000);
-    delay(targetTime);
-
-    gameActive = true;
-    gameStart = millis();
+  if(!gameWaiting && !gameReady){
+    waitTime=random(2000,5000);
+    waitStart=millis();
+    gameWaiting=true;
   }
 
-  display.setCursor(20, 30);
-  display.print("PRESS!");
+  if(gameWaiting){
+    u8g2.clearBuffer();
+    u8g2.drawStr(20,30,"Wait...");
+    u8g2.sendBuffer();
 
-  if (btnPressed(BTN1, lastBtn1)) {
-    int reaction = millis() - gameStart;
-
-    display.clearDisplay();
-    display.setCursor(10, 20);
-    display.print("Time:");
-    display.print(reaction);
-    display.print("ms");
-
-    beep(1500);
-    delay(2000);
-
-    gameActive = false;
-    mode = 0;
+    if(millis()-waitStart>=waitTime){
+      gameWaiting=false;
+      gameReady=true;
+      gameStart=millis();
+    }
   }
 
-  if (btnPressed(BTN2, lastBtn2)) {
-    gameActive = false;
-    mode = 0;
+  if(gameReady){
+    u8g2.clearBuffer();
+    u8g2.drawStr(20,30,"PRESS!");
+    u8g2.sendBuffer();
+
+    if(pressed(BTN1,lastB1)){
+      unsigned long reaction=millis()-gameStart;
+
+      u8g2.clearBuffer();
+      char buf[20];
+      sprintf(buf,"%lums",reaction);
+      u8g2.drawStr(20,30,buf);
+      u8g2.sendBuffer();
+
+      beep(2200,100);
+      delay(1500);
+
+      gameReady=false;
+      mode=MENU;
+    }
   }
 
-  display.display();
+  if(pressed(BTN2,lastB2)){
+    gameWaiting=false;
+    gameReady=false;
+    mode=MENU;
+  }
 }
 
-//sound
-void beep(int freq) {
-  tone(BUZZER, freq, 50);
-}
 
 //ekam <3
