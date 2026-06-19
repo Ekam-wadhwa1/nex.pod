@@ -1,4 +1,0 @@
-Adafruit GFX Library
-RTClib
-Adafruit SSD1306
-u8g2lib
